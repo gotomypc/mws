@@ -1,0 +1,159 @@
+#!/bin/sh -e
+
+# Install constants
+PREFIX=/Users/cprodescu/workspace/mws/debian
+SYSCONFDIR=/etc/mws
+LOCALSTATEDIR=/var/lib/mws
+
+# Initialize our own variables:
+harvest_data=""
+port="9090"
+
+show_help() {
+progname=`basename $0`
+cat << EOF
+Usage:
+    $progname create [-p <port>] -i <harvest_data> <name>
+        create configuration for mws deployment
+          -p <port>           port used to run mwsd
+          -i <harvest_data>   path from where to load math harvests
+
+    $progname list
+        list available configurations
+
+    $progname test <name>
+        run mwsd configuration in test mode
+
+    $progname enable <name>
+        enable configuration
+
+    $progname disable <name>
+        disable configuration
+
+    $progname remove <name>
+        remove configuration
+
+    $progname help
+        display this help message
+
+EOF
+}
+
+#
+# list
+#
+perform_list() {
+    echo "Available configurations:"
+    for config_file in $(cd $PREFIX/$SYSCONFDIR/configs && ls *); do
+        echo " $config_file"
+    done
+}
+
+#
+# create
+#
+perform_create() {
+OPTIND=1
+while getopts "p:i:f" opt; do
+    case "$opt" in
+    p)
+        port=$OPTARG
+        ;;
+    i)
+        harvest_data=$OPTARG
+        ;;
+    esac
+done
+
+shift $((OPTIND-1))
+[ "$1" = "--" ] && shift
+
+name="$@"
+
+if [ -z "$name" ]; then
+    echo "<name> is mandatory"
+    show_help
+    exit 1
+fi
+
+if [ -z "$harvest_data" ]; then
+    echo "<harvest_data> is mandatory"
+    show_help
+    exit 1
+fi
+
+output_dir="$PREFIX/$SYSCONFDIR/configs"
+
+install -d "$output_dir"
+#install -d "/var/lib/mws/${name}" TODO
+cat > "$output_dir/${name}" << EOF
+# Configuration file for the service mwsd_${name}
+# logs will be placed in /var/log/mwsd_${name}.log
+# and data to /var/lib/mws/${name}
+
+# Internal mwsd HTTP listen port
+MWS_PORT=${port}
+
+# Path from where to load harvests
+MWS_HARVEST_PATH="${harvest_data}"
+
+# Extra command-line arguments to be passed to mwsd
+MWS_DAEMON_EXTRA_ARGS=""
+EOF
+echo Created MathWebSearch configuration ${name}
+}
+
+perform_test() {
+    if [ $# -lt 1 ]; then
+        echo "<name> expected"
+        show_help
+        exit 1
+    fi
+    name="$1"
+    echo Testing configuration ${name}...
+
+    PATH=$PREFIX/bin:$PATH
+    # include configuration
+    config_file="$PREFIX/$SYSCONFDIR/configs/$name"
+    [ -r $config_file ] || echo "No such configuration ${name}"
+}
+
+# Handle initial arguments
+
+# action should be provided
+if [ $# -eq 0 ]; then
+    show_help
+    exit 1
+fi
+action="$1"
+
+shift
+case "$action" in
+    create)
+        perform_create $@
+        ;;
+    list)
+        perform_list
+        ;;
+    test)
+        perform_test $@
+        ;;
+    enable)
+        perform_enable $@
+        ;;
+    disable)
+        perform_disable $@
+        ;;
+    remove)
+        perform_remove $@
+        ;;
+    help)
+        show_help
+        exit 0
+        ;;
+    *)
+        echo "Unknown argument \"$1\""
+        show_help
+        exit 1
+        ;;
+esac

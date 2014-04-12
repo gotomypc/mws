@@ -62,11 +62,10 @@ SET(CMAKE_MODULE_PATH
     "${THIRD_PARTY_DIR}/cmake-modules")
 
 #      Options              Description                     Default
+OPTION(APPLY_RESTRICTIONS   "apply restrictions to queries" OFF )
 OPTION(WITH_MWS             "build MathWebSearch daemon"    ON )
 OPTION(WITH_CRAWLER         "build MWS crawlers"            ON )
 OPTION(WITH_DOC             "build MWS documentation"       OFF )
-
-OPTION(APPLY_RESTRICTIONS   "apply restrictions to queries" OFF )
 
 # Select build type
 SET(DEFAULT_CMAKE_BUILD_TYPE "Debug")
@@ -78,6 +77,11 @@ ENDIF(NOT CMAKE_BUILD_TYPE)
 SET(CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE} CACHE STRING
     "Choose the type of build: Debug Release RelWithDebInfo MinSizeRel."
     FORCE)
+
+# System configuration directory
+SET(SYSCONFDIR "/etc/mws" CACHE
+    STRING "System configuration directory")
+
 
 # Compiler flags
 SET(COMMON_FLAGS
